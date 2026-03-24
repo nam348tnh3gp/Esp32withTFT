@@ -1,5 +1,5 @@
 // DisplayTFT.h - Hỗ trợ màn hình TFT ST7789 2.0 inch + EC11 Rotary Encoder
-// Đã sửa cho ESP32-C5 (dùng analogWrite thay vì ledcSetup)
+// Dành cho ESP32-S3 (dùng ledcSetup và ledcAttachPin)
 #ifndef DISPLAY_TFT_H
 #define DISPLAY_TFT_H
 
@@ -41,16 +41,16 @@
 TFT_eSPI tft = TFT_eSPI();
 RotaryEncoder encoder(ENC_A, ENC_B, RotaryEncoder::LatchMode::TWO03);
 
-// Biến lưu trạng thái
+// Biến lưu trạng thái (có thể truy cập từ file khác)
 int tft_selected_page = 0;
-int last_encoder_pos = 0;
-unsigned long last_button_press = 0;
-bool button_pressed = false;
-unsigned long last_display_update = 0;
+static int last_encoder_pos = 0;
+static unsigned long last_button_press = 0;
+static bool button_pressed = false;
+static unsigned long last_display_update = 0;
 
 // Cache dữ liệu
-String last_hashrate = "", last_accepted = "", last_total = "", last_uptime = "";
-String last_node = "", last_difficulty = "", last_sharerate = "", last_ping = "", last_accept_rate = "";
+static String last_hashrate = "", last_accepted = "", last_total = "", last_uptime = "";
+static String last_node = "", last_difficulty = "", last_sharerate = "", last_ping = "", last_accept_rate = "";
 
 // ==================== Cấu hình màn hình ====================
 void tft_setup() {
@@ -64,17 +64,17 @@ void tft_setup() {
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
     tft.setTextSize(2);
     
-    // Điều khiển backlight cho ESP32-C5 - dùng analogWrite
-    // ESP32-C5 hỗ trợ analogWrite trên hầu hết các chân GPIO
-    pinMode(TFT_BLK, OUTPUT);
-    analogWrite(TFT_BLK, 200);  // Độ sáng 200/255 (~78%)
+    // Điều khiển backlight bằng PWM (ESP32-S3)
+    ledcSetup(0, 5000, 8);
+    ledcAttachPin(TFT_BLK, 0);
+    ledcWrite(0, 200);
     
     // Khởi tạo encoder
     encoder.setPosition(0);
     pinMode(ENC_SW, INPUT_PULLUP);
     
     #if defined(SERIAL_PRINTING)
-        Serial.println("TFT ST7789 initialized (ESP32-C5)");
+        Serial.println("TFT ST7789 initialized (ESP32-S3)");
         Serial.println("Encoder: A=" + String(ENC_A) + ", B=" + String(ENC_B) + ", SW=" + String(ENC_SW));
     #endif
 }
@@ -93,7 +93,7 @@ void tft_display_boot() {
     tft.setTextSize(1);
     tft.setCursor(25, 85);
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    tft.print("ESP32-C5");
+    tft.print("ESP32-S3 N8R16");
     
     tft.setCursor(25, 105);
     tft.print("v" + String(SOFTWARE_VERSION));
@@ -262,14 +262,13 @@ void tft_display_system_info() {
     tft.println(" MHz");
     
     tft.setCursor(10, 80);
-    tft.print("Chip: ESP32-C5");
+    tft.print("Chip: ESP32-S3");
     
     tft.setCursor(10, 100);
     tft.print("Flash: ");
     tft.print(ESP.getFlashChipSize() / (1024 * 1024));
     tft.println(" MB");
     
-    // WiFi RSSI
     #ifndef USE_LAN
         int rssi = WiFi.RSSI();
         tft.setCursor(10, 120);
@@ -286,7 +285,6 @@ void tft_display_system_info() {
         tft.fillRect(100, 118, bars * 10, 6, TFT_GREEN);
     #endif
     
-    // Uptime
     long millisecs = millis();
     int uptime_days = int(millisecs / (1000 * 60 * 60 * 24));
     int uptime_hours = int((millisecs / (1000 * 60 * 60)) % 24);
@@ -397,4 +395,4 @@ void tft_read_encoder() {
     }
 }
 
-#endif
+#endif  // DISPLAY_TFT_H
