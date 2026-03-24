@@ -59,6 +59,29 @@
 #endif
 // =============================================
 
+// ============ ĐỊNH NGHĨA BIẾN CHO TFT (CHỈ 1 LẦN) ============
+#if defined(DISPLAY_TFT_ST7789)
+    TFT_eSPI tft = TFT_eSPI();
+    RotaryEncoder encoder(ENC_A, ENC_B, RotaryEncoder::LatchMode::TWO03);
+    
+    int tft_selected_page = 0;
+    int last_encoder_pos = 0;
+    unsigned long last_button_press = 0;
+    bool button_pressed = false;
+    unsigned long last_display_update = 0;
+    
+    String last_hashrate = "";
+    String last_accepted = "";
+    String last_total = "";
+    String last_uptime = "";
+    String last_node = "";
+    String last_difficulty = "";
+    String last_sharerate = "";
+    String last_ping = "";
+    String last_accept_rate = "";
+#endif
+// =========================================================================
+
 #if !defined(ESP8266) && defined(DISABLE_BROWNOUT)
     #include "soc/soc.h"
     #include "soc/rtc_cntl_reg.h"
@@ -509,14 +532,12 @@ void update_all_displays() {
     #endif
     
     #if defined(DISPLAY_TFT_ST7789)
-        // Sử dụng biến tft_selected_page từ DisplayTFT.h
-        extern int tft_selected_page;
         if (tft_selected_page == 0) {
             tft_display_mining(String(hashrate_float, 1), String(accepted_share_count), String(share_count), 
                                uptime, node_id, String(difficulty / 100), String(sharerate, 1),
                                String(ping), String(accept_rate, 1));
         }
-        tft_read_encoder();  // Đọc encoder mỗi lần
+        tft_read_encoder();
     #endif
 }
 // ================================================================
@@ -738,7 +759,7 @@ void single_core_loop() {
     job[0]->mine();
     lwdtFeed();
     
-    update_all_displays();  // Cập nhật tất cả display
+    update_all_displays();
     
     VerifyWifi();
     ArduinoOTA.handle();
