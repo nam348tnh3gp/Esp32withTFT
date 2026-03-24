@@ -11,6 +11,7 @@
   https://github.com/revoxhere/duino-coin
 
   Modified for ESP32-S3 N8R16 with TFT ST7789 2.0" + EC11 Encoder
+  Chân cắm: TFT_CS=13, ENC_A=1, ENC_B=2, ENC_SW=3, EXT_BUTTON=4
 */
 
 #pragma GCC optimize("-Ofast")
@@ -70,6 +71,11 @@
     bool button_pressed = false;
     unsigned long last_display_update = 0;
     
+    // Thêm biến cho nút K0
+    unsigned long last_ext_button_press = 0;
+    bool ext_button_pressed = false;
+    
+    // Cache dữ liệu
     String last_hashrate = "";
     String last_accepted = "";
     String last_total = "";
@@ -551,6 +557,7 @@ void setup() {
         Serial.begin(SERIAL_BAUDRATE);
         Serial.println("\n\nDuino-Coin " + String(configuration->MINER_VER));
         Serial.println("ESP32-S3 N8R16 with TFT ST7789 + EC11");
+        Serial.println("Pin mapping: TFT_CS=13, ENC_A=1, ENC_B=2, ENC_SW=3, EXT_BTN=4");
     #endif
     
     pinMode(LED_BUILTIN, OUTPUT);
