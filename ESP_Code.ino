@@ -72,7 +72,7 @@
     #define CORE 1
 #else
     #define CORE 2
-    #if !defined(DISPLAY_TFT_ST7789)  // Tránh xung đột nếu dùng TFT
+    #if !defined(DISPLAY_TFT_ST7789)
         #include <TridentTD_EasyFreeRTOS32.h>
         void Task1Code( void * parameter );
         void Task2Code( void * parameter );
@@ -509,8 +509,9 @@ void update_all_displays() {
     #endif
     
     #if defined(DISPLAY_TFT_ST7789)
-        // Chỉ cập nhật nếu đang ở trang chính
-        if (selected_page == 0) {
+        // Sử dụng biến tft_selected_page từ DisplayTFT.h
+        extern int tft_selected_page;
+        if (tft_selected_page == 0) {
             tft_display_mining(String(hashrate_float, 1), String(accepted_share_count), String(share_count), 
                                uptime, node_id, String(difficulty / 100), String(sharerate, 1),
                                String(ping), String(accept_rate, 1));
