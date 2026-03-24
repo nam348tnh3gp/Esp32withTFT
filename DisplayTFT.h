@@ -1,5 +1,6 @@
 // DisplayTFT.h - Hỗ trợ màn hình TFT ST7789 2.0 inch + EC11 Rotary Encoder
 // PHIÊN BẢN HOÀN CHỈNH - CÓ ĐỊNH NGHĨA HÀM
+// ĐÃ SỬA CHÂN THEO YÊU CẦU: ENC_A=1, ENC_B=2, ENC_SW=3, EXT_BUTTON=4
 #ifndef DISPLAY_TFT_H
 #define DISPLAY_TFT_H
 
@@ -9,7 +10,7 @@
 
 // ==================== Định nghĩa chân cắm ====================
 #ifndef TFT_CS
-  #define TFT_CS   8
+  #define TFT_CS   13   // Đã sửa từ 8 -> 13 theo ví dụ
 #endif
 #ifndef TFT_DC
   #define TFT_DC   9
@@ -27,14 +28,20 @@
   #define TFT_BLK  46
 #endif
 
+// Chân EC11 Rotary Encoder - ĐÃ SỬA THEO YÊU CẦU
 #ifndef ENC_A
-  #define ENC_A    2
+  #define ENC_A    1    // Sửa từ 2 -> 1
 #endif
 #ifndef ENC_B
-  #define ENC_B    3
+  #define ENC_B    2    // Sửa từ 3 -> 2
 #endif
 #ifndef ENC_SW
-  #define ENC_SW   1
+  #define ENC_SW   3    // Sửa từ 1 -> 3 (nút nhấn encoder)
+#endif
+
+// Nút bấm phụ K0 (nếu có)
+#ifndef EXT_BUTTON
+  #define EXT_BUTTON 4   // Thêm nút K0 ở GPIO4
 #endif
 
 // ==================== KHAI BÁO EXTERN (định nghĩa trong .ino) ====================
@@ -46,6 +53,8 @@ extern int last_encoder_pos;
 extern unsigned long last_button_press;
 extern bool button_pressed;
 extern unsigned long last_display_update;
+extern unsigned long last_ext_button_press;  // Thêm cho nút K0
+extern bool ext_button_pressed;               // Thêm cho nút K0
 
 extern String last_hashrate;
 extern String last_accepted;
@@ -73,12 +82,15 @@ void tft_setup() {
     ledcAttachPin(TFT_BLK, 0);
     ledcWrite(0, 200);
     
+    // Khởi tạo encoder
     encoder.setPosition(0);
     pinMode(ENC_SW, INPUT_PULLUP);
+    pinMode(EXT_BUTTON, INPUT_PULLUP);  // Khởi tạo nút K0
     
     #if defined(SERIAL_PRINTING)
         Serial.println("TFT ST7789 initialized (ESP32-S3)");
         Serial.println("Encoder: A=" + String(ENC_A) + ", B=" + String(ENC_B) + ", SW=" + String(ENC_SW));
+        Serial.println("Extra button K0: GPIO" + String(EXT_BUTTON));
     #endif
 }
 
@@ -374,6 +386,7 @@ void tft_read_encoder() {
         }
     }
     
+    // Xử lý nút nhấn trên encoder (SW)
     if (digitalRead(ENC_SW) == LOW && !button_pressed && millis() - last_button_press > 200) {
         button_pressed = true;
         last_button_press = millis();
@@ -388,6 +401,33 @@ void tft_read_encoder() {
     
     if (digitalRead(ENC_SW) == HIGH && button_pressed) {
         button_pressed = false;
+    }
+    
+    // Xử lý nút bấm phụ K0 (nếu có)
+    if (digitalRead(EXT_BUTTON) == LOW && !ext_button_pressed && millis() - last_ext_button_press > 200) {
+        ext_button_pressed = true;
+        last_ext_button_press = millis();
+        
+        #if defined(SERIAL_PRINTING)
+            Serial.println("Extra button K0 pressed!");
+        #endif
+        
+        // Có thể thêm chức năng cho nút K0 ở đây
+        // Ví dụ: reset về trang chính hoặc toggle chức năng khác
+        if (tft_selected_page != 0) {
+            tft_selected_page = 0;
+            last_encoder_pos = 0;
+            encoder.setPosition(0);
+            last_hashrate = "";
+        } else {
+            // Nếu đang ở trang chính, có thể hiển thị thông tin thêm
+            tft_display_info("K0 Pressed!");
+            delay(1000);
+        }
+    }
+    
+    if (digitalRead(EXT_BUTTON) == HIGH && ext_button_pressed) {
+        ext_button_pressed = false;
     }
 }
 
