@@ -7,6 +7,7 @@
 #include <SPI.h>
 #include <TFT_eSPI.h>
 #include <RotaryEncoder.h>
+#include "Settings.h"
 
 // ==================== Định nghĩa chân cắm ====================
 #ifndef TFT_CS
