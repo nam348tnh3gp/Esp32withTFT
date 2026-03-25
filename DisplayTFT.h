@@ -1,15 +1,15 @@
 // DisplayTFT.h - Hỗ trợ màn hình TFT ST7789 2.0 inch + EC11 Rotary Encoder
 // PHIÊN BẢN HOÀN CHỈNH - TƯƠNG THÍCH ESP32 (S3, C3, C5) VÀ ESP8266
-// CHÂN: ENC_A=1, ENC_B=2, ENC_SW=3, EXT_BUTTON=4, TFT_CS=13, TFT_BLK=46
+// CÁCH 3: ĐỊNH NGHĨA TRỰC TIẾP TRONG CODE - KHÔNG CẦN USER_SETUP.H
 #ifndef DISPLAY_TFT_H
 #define DISPLAY_TFT_H
 
 #include <SPI.h>
-#include <TFT_eSPI.h>
 #include <RotaryEncoder.h>
 #include "Settings.h"
 
-// ==================== Định nghĩa chân cắm ====================
+// ==================== ĐỊNH NGHĨA CHÂN CHO TFT ====================
+// QUAN TRỌNG: Định nghĩa TRƯỚC KHI include TFT_eSPI.h
 #ifndef TFT_CS
   #define TFT_CS   13
 #endif
@@ -29,6 +29,20 @@
   #define TFT_BLK  46
 #endif
 
+// Định nghĩa driver cho ST7789
+#define ST7789_DRIVER
+
+// Kích thước màn hình
+#define TFT_WIDTH  240
+#define TFT_HEIGHT 320
+
+// Tần số SPI
+#define SPI_FREQUENCY  40000000
+
+// ==================== INCLUDE TFT_eSPI SAU KHI ĐỊNH NGHĨA ====================
+#include <TFT_eSPI.h>
+
+// ==================== Định nghĩa chân encoder ====================
 #ifndef ENC_A
   #define ENC_A    1
 #endif
