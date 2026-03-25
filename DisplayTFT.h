@@ -1,6 +1,6 @@
 // DisplayTFT.h - Hỗ trợ màn hình TFT ST7789 2.0 inch + EC11 Rotary Encoder
-// PHIÊN BẢN HOÀN CHỈNH - CÓ ĐỊNH NGHĨA HÀM
-// ĐÃ SỬA CHÂN THEO YÊU CẦU: ENC_A=1, ENC_B=2, ENC_SW=3, EXT_BUTTON=4
+// PHIÊN BẢN HOÀN CHỈNH - TƯƠNG THÍCH ESP32 (S3, C3, C5) VÀ ESP8266
+// CHÂN: ENC_A=1, ENC_B=2, ENC_SW=3, EXT_BUTTON=4, TFT_CS=13, TFT_BLK=46
 #ifndef DISPLAY_TFT_H
 #define DISPLAY_TFT_H
 
@@ -11,7 +11,7 @@
 
 // ==================== Định nghĩa chân cắm ====================
 #ifndef TFT_CS
-  #define TFT_CS   13   // Đã sửa từ 8 -> 13 theo ví dụ
+  #define TFT_CS   13
 #endif
 #ifndef TFT_DC
   #define TFT_DC   9
@@ -29,23 +29,21 @@
   #define TFT_BLK  46
 #endif
 
-// Chân EC11 Rotary Encoder - ĐÃ SỬA THEO YÊU CẦU
 #ifndef ENC_A
-  #define ENC_A    1    // Sửa từ 2 -> 1
+  #define ENC_A    1
 #endif
 #ifndef ENC_B
-  #define ENC_B    2    // Sửa từ 3 -> 2
+  #define ENC_B    2
 #endif
 #ifndef ENC_SW
-  #define ENC_SW   3    // Sửa từ 1 -> 3 (nút nhấn encoder)
+  #define ENC_SW   3
 #endif
 
-// Nút bấm phụ K0 (nếu có)
 #ifndef EXT_BUTTON
-  #define EXT_BUTTON 4   // Thêm nút K0 ở GPIO4
+  #define EXT_BUTTON 4
 #endif
 
-// ==================== KHAI BÁO EXTERN (định nghĩa trong .ino) ====================
+// ==================== KHAI BÁO EXTERN ====================
 extern TFT_eSPI tft;
 extern RotaryEncoder encoder;
 
@@ -54,8 +52,8 @@ extern int last_encoder_pos;
 extern unsigned long last_button_press;
 extern bool button_pressed;
 extern unsigned long last_display_update;
-extern unsigned long last_ext_button_press;  // Thêm cho nút K0
-extern bool ext_button_pressed;               // Thêm cho nút K0
+extern unsigned long last_ext_button_press;
+extern bool ext_button_pressed;
 
 extern String last_hashrate;
 extern String last_accepted;
@@ -78,18 +76,29 @@ void tft_setup() {
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
     tft.setTextSize(2);
     
-    // Backlight PWM cho ESP32-S3
-    ledcSetup(0, 5000, 8);
-    ledcAttachPin(TFT_BLK, 0);
-    ledcWrite(0, 200);
+    // ============ BACKLIGHT PWM - CHUẨN ESP32 CORE 3.0+ ============
+    #if defined(ESP32)
+        // Cách mới: ledcAttach(pin, freq, resolution) + ledcWrite(pin, duty)
+        ledcAttach(TFT_BLK, 5000, 8);  // Pin, Frequency (Hz), Resolution (bits)
+        ledcWrite(TFT_BLK, 200);        // Độ sáng 200/255 (~78%)
+    #elif defined(ESP8266)
+        // ESP8266 dùng analogWrite
+        pinMode(TFT_BLK, OUTPUT);
+        analogWrite(TFT_BLK, 200);
+    #else
+        // Fallback cho các board khác
+        pinMode(TFT_BLK, OUTPUT);
+        digitalWrite(TFT_BLK, HIGH);
+    #endif
+    // ================================================================
     
     // Khởi tạo encoder
     encoder.setPosition(0);
     pinMode(ENC_SW, INPUT_PULLUP);
-    pinMode(EXT_BUTTON, INPUT_PULLUP);  // Khởi tạo nút K0
+    pinMode(EXT_BUTTON, INPUT_PULLUP);
     
     #if defined(SERIAL_PRINTING)
-        Serial.println("TFT ST7789 initialized (ESP32-S3)");
+        Serial.println("TFT ST7789 initialized");
         Serial.println("Encoder: A=" + String(ENC_A) + ", B=" + String(ENC_B) + ", SW=" + String(ENC_SW));
         Serial.println("Extra button K0: GPIO" + String(EXT_BUTTON));
     #endif
@@ -108,7 +117,16 @@ void tft_display_boot() {
     tft.setTextSize(1);
     tft.setCursor(25, 85);
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    tft.print("ESP32-S3 N8R16");
+    
+    #if defined(ESP32S3)
+        tft.print("ESP32-S3 N8R16");
+    #elif defined(ESP32C5)
+        tft.print("ESP32-C5");
+    #elif defined(ESP8266)
+        tft.print("ESP8266");
+    #else
+        tft.print("ESP32");
+    #endif
     
     tft.setCursor(25, 105);
     tft.print("v" + String(SOFTWARE_VERSION));
@@ -269,11 +287,23 @@ void tft_display_system_info() {
     
     tft.setCursor(10, 60);
     tft.print("CPU Freq: ");
-    tft.print(getCpuFrequencyMhz());
+    #if defined(ESP8266)
+        tft.print(ESP.getCpuFreqMHz());
+    #else
+        tft.print(getCpuFrequencyMhz());
+    #endif
     tft.println(" MHz");
     
     tft.setCursor(10, 80);
-    tft.print("Chip: ESP32-S3");
+    #if defined(ESP8266)
+        tft.print("Chip: ESP8266");
+    #elif defined(ESP32C5)
+        tft.print("Chip: ESP32-C5");
+    #elif defined(ESP32S3)
+        tft.print("Chip: ESP32-S3");
+    #else
+        tft.print("Chip: ESP32");
+    #endif
     
     tft.setCursor(10, 100);
     tft.print("Flash: ");
@@ -387,7 +417,7 @@ void tft_read_encoder() {
         }
     }
     
-    // Xử lý nút nhấn trên encoder (SW)
+    // Xử lý nút nhấn encoder (SW)
     if (digitalRead(ENC_SW) == LOW && !button_pressed && millis() - last_button_press > 200) {
         button_pressed = true;
         last_button_press = millis();
@@ -404,7 +434,7 @@ void tft_read_encoder() {
         button_pressed = false;
     }
     
-    // Xử lý nút bấm phụ K0 (nếu có)
+    // Xử lý nút phụ K0
     if (digitalRead(EXT_BUTTON) == LOW && !ext_button_pressed && millis() - last_ext_button_press > 200) {
         ext_button_pressed = true;
         last_ext_button_press = millis();
@@ -413,15 +443,12 @@ void tft_read_encoder() {
             Serial.println("Extra button K0 pressed!");
         #endif
         
-        // Có thể thêm chức năng cho nút K0 ở đây
-        // Ví dụ: reset về trang chính hoặc toggle chức năng khác
         if (tft_selected_page != 0) {
             tft_selected_page = 0;
             last_encoder_pos = 0;
             encoder.setPosition(0);
             last_hashrate = "";
         } else {
-            // Nếu đang ở trang chính, có thể hiển thị thông tin thêm
             tft_display_info("K0 Pressed!");
             delay(1000);
         }
