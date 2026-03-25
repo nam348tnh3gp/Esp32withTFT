@@ -1,6 +1,7 @@
 // Settings.h - Cho ESP32-S3 N8R16 với TFT ST7789 + EC11
 #ifndef SETTINGS_H
 #define SETTINGS_H
+#include <IPAddress.h>
 // DNS Server (Google DNS)
 #define DNS_SERVER IPAddress(8, 8, 8, 8)
 
